@@ -1,65 +1,48 @@
 # --- make repo root importable ---
 import os, sys
+import pandas as pd
+import requests
+import streamlit as st
+
 THIS_DIR = os.path.dirname(__file__)
 REPO_ROOT = os.path.abspath(os.path.join(THIS_DIR, ".."))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
-# # ----------------------------------
 
 
 def recommend_process(s_sulfuro_pct, as_ppm):
-    """Devuelve una recomendación de proceso en función de la geoquímica.
-
-    - Si s_sulfuro_pct es mayor que 1% y as_ppm es nulo o menor a 500 ppm se recomienda BIOX.
-    - Si as_ppm es mayor a 500 ppm se sugiere revisar riesgo de arsénico y considerar biolixiviación.
-    - En cualquier otro caso se recomienda preconcentración o biolixiviación.
     """
-    # Si no hay dato de azufre
+    Devuelve una recomendación de proceso en función de la geoquímica.
+    - Si s_sulfuro_pct es mayor que 1 % y as_ppm es nulo o ≤500 ppm, se recomienda BIOX.
+    - Si as_ppm es mayor a 500 ppm, se sugiere riesgo de arsénico y considerar biolixiviación.
+    - En cualquier otro caso, se recomienda preconcentración o biolixiviación.
+    """
     if s_sulfuro_pct is None:
-        return "Sin datos de S_sulfuro"
-    # BIOX recomendado
-    if s_sulfuro_pct > 1 and (as_ppm is None or as_ppm < 500):
+        return "Sin datos de S sulfuro"
+    if s_sulfuro_pct > 1 and (as_ppm is None or as_ppm <= 500):
         return "BIOX"
-    # Riesgo de arsénico elevado
     if as_ppm is not None and as_ppm > 500:
-        return "Revisar riesgo de arsénico y considerar biolixiviación"
-    # Caso por defecto
+        return "Riesgo arsénico; considerar biolixiviación"
     return "Preconcentración o biolixiviación"
 
 
-"
-""
-Streamlit UI for the Eco‑Pilot Caracterización module.
+# Configuración y título de la aplicación
+st.set_page_config(page_title="Eco-Pilot · Caracterización y Laboratorio", layout="wide")
+st.title("Eco-Pilot · Módulo de Caracterización y Laboratorio (MVP)")
 
-This interface allows a user to upload a template Excel file with multiple
-tabs (``01_Lotes``, ``02_Muestras``, ``03_Geoquimica``) and explore the
-information interactively.  It also computes a simple recommendation using
-rules defined in ``utils.rules``.  Optionally, data can be posted to the
-REST API by specifying its URL and clicking the upload button.
-"""
-
-import streamlit as st
-import pandas as pd
-import requests
-
-# from utils.rules import recommend_process
-# 
-
-st.set_page_config(page_title="Eco‑Pilot · Caracterización", layout="wide")
-
-st.title("Eco‑Pilot · Módulo de Caracterización")
-
-api_url = st.sidebar.text_input(
-    "URL de la API (opcional)", value="http://localhost:8000"
+# Campo para URL base de la API (opcional)
+api_url = st.text_input(
+    "URL base de la API (opcional, por ejemplo http://localhost:8000)",
+    value="http://localhost:8000"
 )
 
+# Cargador de archivo Excel
 uploaded_file = st.file_uploader(
-    "Sube la plantilla Excel (con las pestañas 01_Lotes, 02_Muestras y 03_Geoquimica)",
-    type=["xlsx"],
+    "Sube una plantilla Excel (con hojas 01_Lotes, 02_Muestras y 03_Geoquimica)",
+    type=["xlsx"]
 )
 
 if uploaded_file:
-    # Leer las distintas hojas
     xls = pd.ExcelFile(uploaded_file)
     try:
         df_lotes = pd.read_excel(xls, "01_Lotes")
@@ -68,106 +51,62 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Error leyendo el archivo: {e}")
     else:
-        # Selección de lote
         lote_ids = df_lotes["lote_id"].astype(str).dropna().unique().tolist()
         selected_lote = st.sidebar.selectbox("Selecciona un lote", lote_ids)
 
-        # Mostrar info del lote
+        # Información del lote
         st.header("Información del lote")
-        st.dataframe(
-            df_lotes[df_lotes["lote_id"].astype(str) == selected_lote]
-        )
+        st.dataframe(df_lotes[df_lotes["lote_id"].astype(str) == selected_lote])
 
-        # Filtrar y mostrar muestras
+        # Muestras asociadas
         st.header("Muestras asociadas")
-        muestras_sel = df_muestras[
-            df_muestras["lote_id"].astype(str) == selected_lote
-        ]
+        muestras_sel = df_muestras[df_muestras["lote_id"].astype(str) == selected_lote]
         st.dataframe(muestras_sel)
 
-        # Filtrar y mostrar geoquímica
+        # Geoquímica asociada
         st.header("Resultados de geoquímica")
-        geo_sel = df_geo[
-            df_geo["muestra_id"].astype(str).isin(
-                muestras_sel["muestra_id"].astype(str)
-            )
-        ]
+        geo_sel = df_geo[df_geo["muestra_id"].astype(str).isin(muestras_sel["muestra_id"].astype(str))]
         st.dataframe(geo_sel)
 
-        # Calcular recomendación sencilla
-        st.header("Recomendación de proceso (demo)")
+        # Cálculo de KPIs
+        s_sulfuro_mean = None
+        as_mean = None
         if not geo_sel.empty:
-            # Tomar la media de S_sulfuro y As
-            s_sulfuro_mean = None
-            as_mean = None
             if "S_sulfuro_%" in geo_sel.columns:
                 s_sulfuro_mean = geo_sel["S_sulfuro_%"].astype(float).mean()
             if "As_ppm" in geo_sel.columns:
                 as_mean = geo_sel["As_ppm"].astype(float).mean()
-          
-            recomendacion = recommend_process(s_sulfuro_mean, as_mean)
-     
-                    try:
-            url = api_url.rstrip("/") + "/ml/predict"
-                           payload = {"s_sulfuro_pct": s_sulfuro_mean, "as_ppm": as_mean}
-            resp = requests.post(url, json=payload)
-            if resp.status_code == 200:
-                recomendacion = resp.json().get("recommendation", recomendacion)
-        except Exception:
-            pass
-st.success(
-                f"Recomendación para el lote {selected_lote}: {recomendacion}"
-            )
-        else:
-            st.info(
-                "No hay datos de geoquímica para este lote; no se puede calcular una recomendación."
-            )
 
-        # Botón para cargar datos a la API
-        if st.button("Enviar datos a la API"):
+        st.subheader("Resumen del lote")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Número de muestras", len(muestras_sel))
+        col2.metric("Promedio S sulfuro (%)",
+                    f"{s_sulfuro_mean:.2f}" if s_sulfuro_mean is not None else "N/A")
+        col3.metric("Promedio As (ppm)",
+                    f"{as_mean:.2f}" if as_mean is not None else "N/A")
+
+        # Gráfico de barras
+        if not geo_sel.empty and "S_sulfuro_%" in geo_sel.columns and "As_ppm" in geo_sel.columns:
+            chart_data = pd.DataFrame({
+                "S_sulfuro_%": geo_sel["S_sulfuro_%"].astype(float),
+                "As_ppm": geo_sel["As_ppm"].astype(float)
+            })
+            st.bar_chart(chart_data)
+
+        # Recomendación según reglas básicas
+        recomendacion = recommend_process(s_sulfuro_mean, as_mean)
+
+        # Llamada a la API de ML (si disponible)
+        if api_url:
             try:
-                # Enviar lote seleccionado
-                lotes_to_post = df_lotes[
-                    df_lotes["lote_id"].astype(str) == selected_lote
-                ]
-                for _, lote_row in lotes_to_post.iterrows():
-                    payload = lote_row.dropna().to_dict()
-                    # Normalizar nombres de columnas según el esquema
-                    payload = {
-                        k: v
-                        for k, v in payload.items()
-                        if k
-                        in [
-                            "lote_id",
-                            "deposito_id",
-                            "nombre_lote",
-                            "ubicacion_wgs84_lat",
-                            "ubicacion_wgs84_lon",
-                            "estado_lote",
-                            "volumen_m3_estimado",
-                            "densidad_t_m3_estimada",
-                            "toneladas_estimadas",
-                        ]
-                    }
-                    requests.post(f"{api_url}/lotes/", json=payload)
-                # Enviar muestras con geoquímica asociada
-                for _, muestra_row in muestras_sel.iterrows():
-                    payload = muestra_row.dropna().to_dict()
-                    geo_part = geo_sel[geo_sel["muestra_id"] == muestra_row["muestra_id"]]
-                    geo_json = None
-                    if not geo_part.empty:
-                        row = geo_part.iloc[0].dropna().to_dict()
-                        # Convertir nombres con % a sufijo _pct
-                        def normalize_key(key):
-                            if key.endswith("_%"):
-                                return key[:-2] + "_pct"
-                            return key
-                        geo_json = {normalize_key(k): v for k, v in row.items() if k != "muestra_id"}
-                    if geo_json:
-                        payload["geoquimica"] = geo_json
-                    requests.post(f"{api_url}/muestras/", json=payload)
-                st.success("Datos enviados correctamente a la API.")
-            except Exception as e:
-                st.error(f"Error enviando datos: {e}")
+                url = api_url.rstrip("/") + "/ml/predict"
+                payload = {"s_sulfuro_pct": s_sulfuro_mean, "as_ppm": as_mean}
+                resp = requests.post(url, json=payload)
+                if resp.status_code == 200:
+                    recomendacion = resp.json().get("recommendation", recomendacion)
+            except Exception:
+                pass
+
+        st.success(f"Recomendación para el lote {selected_lote}: {recomendacion}")
 else:
-    st.info("Carga un archivo Excel para comenzar a trabajar.")
+    st.info("Por favor sube una plantilla para comenzar.")
