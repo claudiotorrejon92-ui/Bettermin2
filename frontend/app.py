@@ -4,7 +4,28 @@ THIS_DIR = os.path.dirname(__file__)
 REPO_ROOT = os.path.abspath(os.path.join(THIS_DIR, ".."))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
-# ----------------------------------
+# # ----------------------------------
+
+
+def recommend_process(s_sulfuro_pct, as_ppm):
+    """Devuelve una recomendación de proceso en función de la geoquímica.
+
+    - Si s_sulfuro_pct es mayor que 1% y as_ppm es nulo o menor a 500 ppm se recomienda BIOX.
+    - Si as_ppm es mayor a 500 ppm se sugiere revisar riesgo de arsénico y considerar biolixiviación.
+    - En cualquier otro caso se recomienda preconcentración o biolixiviación.
+    """
+    # Si no hay dato de azufre
+    if s_sulfuro_pct is None:
+        return "Sin datos de S_sulfuro"
+    # BIOX recomendado
+    if s_sulfuro_pct > 1 and (as_ppm is None or as_ppm < 500):
+        return "BIOX"
+    # Riesgo de arsénico elevado
+    if as_ppm is not None and as_ppm > 500:
+        return "Revisar riesgo de arsénico y considerar biolixiviación"
+    # Caso por defecto
+    return "Preconcentración o biolixiviación"
+
 
 """
 Streamlit UI for the Eco‑Pilot Caracterización module.
@@ -20,8 +41,8 @@ import streamlit as st
 import pandas as pd
 import requests
 
-from utils.rules import recommend_process
-
+# from utils.rules import recommend_process
+# 
 
 st.set_page_config(page_title="Eco‑Pilot · Caracterización", layout="wide")
 
