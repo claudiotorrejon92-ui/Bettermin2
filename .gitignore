@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Database files
+*.db
+
+# Environments
+.env
+venv/
+env/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Streamlit local config
+.streamlit/
+
+# Logs
+*.log
