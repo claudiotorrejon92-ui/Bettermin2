@@ -109,7 +109,7 @@ if uploaded_file:
      
                     try:
             url = api_url.rstrip("/") + "/ml/predict"
-            payload = {"s_sulfuro_pct": s_sulfuro_mean, "as_ppm": as_mean}
+                           payload = {"s_sulfuro_pct": s_sulfuro_mean, "as_ppm": as_mean}
             resp = requests.post(url, json=payload)
             if resp.status_code == 200:
                 recomendacion = resp.json().get("recommendation", recomendacion)
