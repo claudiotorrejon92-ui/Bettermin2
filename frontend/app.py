@@ -27,7 +27,8 @@ def recommend_process(s_sulfuro_pct, as_ppm):
     return "Preconcentración o biolixiviación"
 
 
-"""
+"
+""
 Streamlit UI for the Eco‑Pilot Caracterización module.
 
 This interface allows a user to upload a template Excel file with multiple
@@ -103,8 +104,18 @@ if uploaded_file:
                 s_sulfuro_mean = geo_sel["S_sulfuro_%"].astype(float).mean()
             if "As_ppm" in geo_sel.columns:
                 as_mean = geo_sel["As_ppm"].astype(float).mean()
+          
             recomendacion = recommend_process(s_sulfuro_mean, as_mean)
-            st.success(
+     
+                    try:
+            url = api_url.rstrip("/") + "/ml/predict"
+            payload = {"s_sulfuro_pct": s_sulfuro_mean, "as_ppm": as_mean}
+            resp = requests.post(url, json=payload)
+            if resp.status_code == 200:
+                recomendacion = resp.json().get("recommendation", recomendacion)
+        except Exception:
+            pass
+st.success(
                 f"Recomendación para el lote {selected_lote}: {recomendacion}"
             )
         else:
