@@ -1,13 +1,11 @@
 """
-Package initialization for the FastAPI backend of Eco‑Pilot Caracterización.
+Utility functions and rule engine for Eco‑Pilot Caracterización.
 
-This package exposes the API application via `app.main` and consolidates
-database utilities, ORM models, Pydantic schemas and route definitions.
+This package currently includes a simple rule evaluator used in the Streamlit
+front‑end to recommend a processing route (p. ej. BIOX, preconcentración o
+biolixiviación) en función de la geoquímica promedio.
 """
 
-__all__ = [
-    "db",
-    "models",
-    "schemas",
-    "main",
-]
+from .rules import recommend_process  # noqa: F401
+
+__all__ = ["recommend_process"]
