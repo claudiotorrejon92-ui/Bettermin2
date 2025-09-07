@@ -1,3 +1,11 @@
+# --- make repo root importable ---
+import os, sys
+THIS_DIR = os.path.dirname(__file__)
+REPO_ROOT = os.path.abspath(os.path.join(THIS_DIR, ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+# ----------------------------------
+
 """
 Streamlit UI for the Eco‑Pilot Caracterización module.
 
