@@ -7,7 +7,7 @@ instances (SQLAlchemy models) and convert them to plain dicts.
 """
 
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class GeoquimicaBase(BaseModel):
@@ -74,7 +74,7 @@ class LoteCreate(LoteBase):
 
 
 class Lote(LoteBase):
-    muestras: List[Muestra] = []
+    muestras: List[Muestra] = Field(default_factory=list)
 
     class Config:
         orm_mode = True
