@@ -14,7 +14,7 @@ class PredictionResponse(BaseModel):
     score: float
     recommendation: str
 
-@router.post("/ml/predict", response_model=PredictionResponse)
+@router.post("/predict", response_model=PredictionResponse)
 def predict_ml(request: PredictionRequest):
     """
     Endpoint to get ML-based recommendation using sulfide and arsenic data.
