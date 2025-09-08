@@ -16,4 +16,4 @@ class LabPredictionResponse(BaseModel):
 async def predict_lab(req: LabPredictionRequest):
     """Predicts the recommended bio-process using lab features."""
     result = predict_bio_process(req.s_sulfuro_pct, req.as_ppm)
-    return LabPredictionResponse(recommendation=result[0])
+    return LabPredictionResponse(recommendation=result["recommendation"])
