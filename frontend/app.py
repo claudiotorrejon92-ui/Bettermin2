@@ -11,7 +11,21 @@ REPO_ROOT = os.path.abspath(os.path.join(THIS_DIR, ".."))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from utils.rules import recommend_process
+
+def recommend_process(s_sulfuro_pct, as_ppm):
+    """
+    Devuelve una recomendación de proceso en función de la geoquímica.
+    - Si s_sulfuro_pct es mayor que 1 % y as_ppm es nulo o ≤500 ppm, se recomienda BIOX.
+    - Si as_ppm es mayor a 500 ppm, se sugiere riesgo de arsénico y considerar biolixiviación.
+    - En cualquier otro caso, se recomienda preconcentración o biolixiviación.
+    """
+    if s_sulfuro_pct is None:
+        return "Sin datos de S sulfuro"
+    if s_sulfuro_pct > 1 and (as_ppm is None or as_ppm <= 500):
+        return "BIOX"
+    if as_ppm is not None and as_ppm > 500:
+        return "Riesgo arsénico; considerar biolixiviación"
+    return "Preconcentración o biolixiviación"
 
 
 # Configuración y título de la aplicación
