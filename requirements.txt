@@ -7,3 +7,7 @@ pandas
 openpyxl
 python-multipart
 requests
+numpy
+scikit-learn
+joblib
+matplotlib
