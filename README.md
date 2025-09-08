@@ -9,15 +9,22 @@ EcoPilot-Caracterizacion/
 ├── app/                  # Backend FastAPI (modelos, rutas y configuración de la BD)
 │   ├── __init__.py
 │   ├── db.py            # Configuración de SQLAlchemy y sesión
-│   ├── models.py        # Modelos de SQLAlchemy (Lote, Muestra, Geoquimica)
-│   ├── schemas.py       # Esquemas de Pydantic para validación y serialización
+│   ├── lab_pipeline.py  # Lógica de laboratorio y extracción de features
 │   ├── main.py          # Punto de entrada para la app FastAPI
-│   └── routes/          # Rutas de la API (controladores)
-│       ├── __init__.py
-│       ├── lotes.py     # Endpoints CRUD para lotes
-│       └── muestras.py  # Endpoints CRUD para muestras (y geoquímica asociada)
+│   ├── ml.py            # Utilidades de predicción ML
+│   ├── models.py        # Modelos de SQLAlchemy (Lote, Muestra, Geoquímica)
+│   ├── routes/          # Rutas de la API (controladores)
+│   │   ├── __init__.py
+│   │   ├── lab.py       # Endpoint de predicción basada en laboratorio
+│   │   ├── lotes.py     # Endpoints CRUD para lotes
+│   │   ├── ml.py        # Endpoint de predicción ML
+│   │   └── muestras.py  # Endpoints CRUD para muestras (y geoquímica asociada)
+│   └── schemas.py       # Esquemas de Pydantic para validación y serialización
 ├── frontend/
-│   └── app.py           # Aplicación Streamlit para cargar/consultar datos
+│   ├── app.py           # Aplicación Streamlit para cargar/consultar datos
+│   └── lab_ml_app.py    # Aplicación Streamlit para predicciones de laboratorio/ML
+├── sample_data/
+│   └── ecopilot_lab_template.csv
 ├── utils/
 │   ├── __init__.py
 │   └── rules.py         # Motor de reglas simple
@@ -26,8 +33,7 @@ EcoPilot-Caracterizacion/
 ├── Dockerfile           # Construcción de contenedor
 ├── LICENSE              # Licencia MIT
 ├── README.md            # Este archivo
-├── requirements.txt     # Dependencias de Python
-└── tests/               # Directorio para pruebas (opcional)
+└── requirements.txt     # Dependencias de Python
 ```
 
 ## Cómo correr localmente
@@ -44,25 +50,28 @@ EcoPilot-Caracterizacion/
    uvicorn app.main:app --reload
    ```
 
-3. En otra terminal, corre la aplicación Streamlit:
+3. En otra terminal, corre la aplicación Streamlit principal:
 
    ```bash
    streamlit run frontend/app.py
    ```
 
-4. Accede a la API en `http://localhost:8000` y a la interfaz de Streamlit en `http://localhost:8501`.
+4. Si deseas probar los modelos de laboratorio y ML, levanta la aplicación dedicada:
+
+   ```bash
+   streamlit run frontend/lab_ml_app.py
+   ```
+
+5. Accede a la API en `http://localhost:8000` y a las interfaces de Streamlit en `http://localhost:8501`.
+
+   La API dispone de los siguientes endpoints de predicción:
+
+   - `POST /ml/predict`: devuelve un `score` y una recomendación usando un modelo de machine learning.
+   - `POST /lab/predict`: entrega una recomendación basada en el pipeline de laboratorio.
 
 ## Base de datos
 
 Por defecto el backend utiliza SQLite (`app.db`) para facilitar la puesta en marcha.  Los modelos de SQLAlchemy y los esquemas de Pydantic están definidos en `app/models.py` y `app/schemas.py`.  Para cambiar a otro motor (PostgreSQL, MySQL, etc.), ajusta la constante `DATABASE_URL` en `app/db.py`.
-
-## Ejecutar pruebas
-
-El repositorio incluye un ejemplo básico de pruebas en el directorio `tests/`.  Para ejecutarlas:
-
-```bash
-pytest
-```
 
 ## Licencia
 
