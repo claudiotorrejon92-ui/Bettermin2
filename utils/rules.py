@@ -16,7 +16,7 @@ def recommend_process(s_sulfuro_pct: Optional[float], as_ppm: Optional[float]) -
     - Si `s_sulfuro_pct` es mayor que 1 % y `as_ppm` es nulo o menor a 500 ppm,
       se recomienda un proceso de oxidación biológica (BIOX).
     - Si `as_ppm` es mayor a 500 ppm se sugiere analizar riesgos de arsénico y
-      considerar biolixiviación.
+      considerar biolixiviación (500 ppm se trata como valor límite).
     - En cualquier otro caso se recomienda preconcentración o biolixiviación.
 
     :param s_sulfuro_pct: Porcentaje de azufre en fase sulfuro (0–100)
@@ -31,6 +31,7 @@ def recommend_process(s_sulfuro_pct: Optional[float], as_ppm: Optional[float]) -
         return "BIOX"
 
     # Riesgo de arsénico elevado
+    # Se aplica un umbral estricto: solo valores mayores a 500 ppm activan la regla.
     if as_ppm is not None and as_ppm > 500:
         return "Revisar riesgo de arsénico y considerar biolixiviación"
 
