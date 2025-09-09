@@ -139,3 +139,4 @@ if uploaded is not None:
 
 else:
     st.info("Sube un CSV para comenzar. Puedes probar con la plantilla que te dejamos junto con esta app.")
+
