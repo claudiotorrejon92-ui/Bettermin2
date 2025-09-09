@@ -6,6 +6,6 @@ front‑end to recommend a processing route (p. ej. BIOX, preconcentración o
 biolixiviación) en función de la geoquímica promedio.
 """
 
-from .rules import recommend_process  # noqa: F401
+from utils.rules import recommend_process  # noqa: F401
 
 __all__ = ["recommend_process"]
