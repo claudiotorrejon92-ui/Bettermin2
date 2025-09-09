@@ -12,8 +12,10 @@ def predict_bio_process(s_sulfuro_pct: float, as_ppm: float) -> Dict[str, str]:
     # BIOX recommended
     if s_sulfuro_pct > 1 and (as_ppm is None or as_ppm < 500):
         return {"recommendation": "BIOX"}
-    # High arsenic risk -> consider biolixiviación
-    if as_ppm is not None and as_ppm >= 500:
+    # High arsenic risk -> consider biolixiviación.
+    # Business rule: only values above 500 ppm trigger this path; 500 ppm is treated
+    # as a borderline case and falls through to the default recommendation.
+    if as_ppm is not None and as_ppm > 500:
         return {"recommendation": "Biolixiviación"}
     # Default case: preconcentración o biolixiviación
     return {"recommendation": "Preconcentración o biolixiviación"}
