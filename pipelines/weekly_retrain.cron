@@ -1,0 +1,2 @@
+# Cron job to run retraining pipeline every Monday at 00:00
+0 0 * * 1 python -m pipelines.retrain >> logs/retrain.log 2>&1

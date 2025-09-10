@@ -5,6 +5,11 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 from math import erf, exp, sqrt, pi
 
+try:  # Lazy import so the scheduler works without the pipeline
+    from pipelines.retrain import run as _default_retrain
+except Exception:  # pragma: no cover - pipeline may not be available
+    _default_retrain = None
+
 
 # ----------------------------------------------------------------------------
 # Helper functions for normal distribution
@@ -46,8 +51,12 @@ class Scheduler:
     xi:
         Small positive value encouraging exploration for EI.
     retrain_callback:
-        Optional callable invoked whenever a new outcome is registered. It can
-        be used to trigger model retraining.
+        Optional callable invoked when a number of outcomes has been
+        registered, allowing model retraining to be triggered. By default this
+        points to ``pipelines.retrain.run`` if available.
+    retrain_every:
+        Trigger ``retrain_callback`` after this many completed runs. A value of
+        ``0`` disables automatic retraining.
     """
 
     benefit_predictor: BenefitPredictor
@@ -55,7 +64,8 @@ class Scheduler:
     strategy: str = "ei"
     kappa: float = 2.0
     xi: float = 0.01
-    retrain_callback: Optional[RetrainCallback] = None
+    retrain_callback: Optional[RetrainCallback] = _default_retrain
+    retrain_every: int = 0
     history: List[Dict[str, float]] = field(default_factory=list)
     best_observed: float = float("-inf")
 
@@ -112,5 +122,9 @@ class Scheduler:
         self.history[run_id]["outcome"] = outcome
         if outcome > self.best_observed:
             self.best_observed = outcome
-        if self.retrain_callback is not None:
+        if (
+            self.retrain_callback is not None
+            and self.retrain_every > 0
+            and sum(1 for h in self.history if "outcome" in h) % self.retrain_every == 0
+        ):
             self.retrain_callback(self.history)
