@@ -11,3 +11,6 @@ numpy
 scikit-learn
 joblib
 matplotlib
+duckdb
+pyarrow
+umap-learn
