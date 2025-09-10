@@ -19,3 +19,6 @@ prometheus-client
 mlflow
 onnxruntime
 lightgbm
+psycopg2-binary
+gspread
+google-auth
