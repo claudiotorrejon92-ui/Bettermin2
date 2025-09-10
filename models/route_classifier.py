@@ -1,12 +1,15 @@
 """Decision tree classifier for processing route prediction."""
+
 from pathlib import Path
 from typing import Dict
 
+import mlflow
 import pandas as pd
 from joblib import dump, load
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
 
+from mlflow_logging import log_run
 from rules.route_rules import validate_features
 
 DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "route" / "training_data.csv"
@@ -35,7 +38,23 @@ def train() -> Dict[str, object]:
     penalized_acc = acc - 0.1 * fn
 
     dump(clf, MODEL_PATH)
-    return {"accuracy": acc, "confusion_matrix": cm.tolist(), "penalized_accuracy": penalized_acc}
+
+    metrics = {"accuracy": acc, "penalized_accuracy": penalized_acc}
+    artifacts = {"model": str(MODEL_PATH)}
+    run_id = log_run("route_classifier", metrics, artifacts)
+    with mlflow.start_run(run_id=run_id):
+        mlflow.set_tags({"route": "route_classifier", "version": "1"})
+        mlflow.sklearn.log_model(
+            clf,
+            "route_classifier_model",
+            registered_model_name="route_classifier",
+        )
+
+    return {
+        "accuracy": acc,
+        "confusion_matrix": cm.tolist(),
+        "penalized_accuracy": penalized_acc,
+    }
 
 
 def predict(features: Dict[str, float]) -> int:
