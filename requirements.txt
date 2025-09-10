@@ -16,3 +16,6 @@ pyarrow
 umap-learn
 evidently
 prometheus-client
+mlflow
+onnxruntime
+lightgbm
