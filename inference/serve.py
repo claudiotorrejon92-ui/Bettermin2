@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Callable
+from typing import Dict, Callable, Optional
 
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
+from monitoring.log import log_event
 
 try:  # Optional dependency
     import onnxruntime as ort
@@ -21,6 +23,9 @@ except Exception:  # pragma: no cover - optional
 
 class PredictRequest(BaseModel):
     features: Dict[str, float]
+    batch: Optional[str] = None
+    outcome: Optional[float] = None
+    improvement: Optional[float] = None
 
 
 def _load_predictor(model_path: Path) -> Callable[[Dict[str, float]], float]:
@@ -56,6 +61,13 @@ def create_app(model_path: str) -> FastAPI:
             result = predictor(req.features)
         except Exception as exc:  # pragma: no cover - runtime errors
             raise HTTPException(status_code=400, detail=str(exc))
+        log_event(
+            input_data=req.features,
+            prediction=result,
+            outcome=req.outcome,
+            improvement=req.improvement,
+            batch=req.batch,
+        )
         return {"prediction": result}
 
     return app
