@@ -87,6 +87,19 @@ EcoPilot-Caracterizacion/
 5. Accede al back‑end en `http://localhost:8000` (o el puerto asignado por cada
    microservicio) y a las interfaces de Streamlit en `http://localhost:8501`.
 
+## MLflow Tracking Server
+
+El servidor de seguimiento de MLflow está disponible en `http://localhost:5000`.
+Configura las credenciales mediante las variables de entorno:
+
+```bash
+export MLFLOW_TRACKING_URI=http://localhost:5000
+export MLFLOW_TRACKING_USERNAME=admin
+export MLFLOW_TRACKING_PASSWORD=mlflow
+```
+
+Estas variables permiten autenticar y registrar ejecuciones en el servidor.
+
 ## Archivos clave
 
 - `mlflow_logging.py`: registro de métricas y artefactos en [MLflow](https://mlflow.org/).
