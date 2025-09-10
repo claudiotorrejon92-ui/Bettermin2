@@ -1,78 +1,99 @@
 # Eco-Pilot · Caracterización (Módulo de Relaves)
 
-Este repositorio proporciona una estructura inicial sólida para el módulo de **caracterización de relaves** de Eco‑Pilot.  La aplicación se divide en un **back‑end** basado en FastAPI y un **front‑end** en Streamlit, junto con utilidades y un motor de reglas sencillo.  El objetivo es que sirva como punto de partida que puedas ampliar con más modelos, reglas o servicios.
+Repositorio experimental que agrupa servicios y utilidades para la
+caracterización de relaves dentro de **Eco‑Pilot**. Incluye un
+back‑end basado en FastAPI, diversas herramientas de análisis y un
+front‑end en Streamlit.
 
 ## Estructura del proyecto
 
 ```text
 EcoPilot-Caracterizacion/
-├── app/                  # Backend FastAPI (modelos, rutas y configuración de la BD)
-│   ├── __init__.py
-│   ├── db.py            # Configuración de SQLAlchemy y sesión
-│   ├── lab_pipeline.py  # Lógica de laboratorio y extracción de features
-│   ├── main.py          # Punto de entrada para la app FastAPI
-│   ├── ml.py            # Utilidades de predicción ML
-│   ├── models.py        # Modelos de SQLAlchemy (Lote, Muestra, Geoquímica)
-│   ├── routes/          # Rutas de la API (controladores)
-│   │   ├── __init__.py
-│   │   ├── lab.py       # Endpoint de predicción basada en laboratorio
-│   │   ├── lotes.py     # Endpoints CRUD para lotes
-│   │   ├── ml.py        # Endpoint de predicción ML
-│   │   └── muestras.py  # Endpoints CRUD para muestras (y geoquímica asociada)
-│   └── schemas.py       # Esquemas de Pydantic para validación y serialización
-├── frontend/
-│   ├── app.py           # Aplicación Streamlit para cargar/consultar datos
-│   └── lab_ml_app.py    # Aplicación Streamlit para predicciones de laboratorio/ML
-├── sample_data/
-│   └── ecopilot_lab_template.csv
-├── utils/
-│   ├── __init__.py
-│   └── rules.py         # Motor de reglas simple
-├── .github/workflows/ci.yml  # GitHub Actions para CI (lint y tests)
-├── .gitignore
-├── Dockerfile           # Construcción de contenedor
-├── LICENSE              # Licencia MIT
-├── README.md            # Este archivo
-└── requirements.txt     # Dependencias de Python
+├── active_learning/    # Programación de experimentos y registro de resultados
+├── api/                # Microservicios FastAPI (lotes, rutas, recomendaciones, etc.)
+├── app/                # API monolítica original para CRUD y predicciones básicas
+├── dashboard/          # Dashboard de ejemplo en Streamlit
+├── ensemble/           # Predictores de desempeño basados en ensambles
+├── explainability/     # Recetas de interpretabilidad (p.ej. SHAP)
+├── features/           # Utilidades para ingeniería de atributos
+├── frontend/           # Aplicaciones Streamlit
+├── governance/         # Utilidades de gobernanza (p.ej. model cards)
+├── ingestion/          # Scripts simples de ingestión de datos
+├── inference/          # Scripts de despliegue/serving
+├── monitoring/         # Detección de deriva y monitoreo
+├── optimization/       # Optimización Bayesiana y espacio de búsqueda
+├── storage/            # Feature store local con DuckDB/Parquet
+├── validation/         # Chequeos y validaciones de datos
+├── mlflow_logging.py   # Utilidades para registrar experimentos en MLflow
+└── requirements.txt    # Dependencias de Python
 ```
+
+## Endpoints disponibles en `api/`
+
+| Archivo            | Endpoint(s)            | Método | Propósito |
+|--------------------|-----------------------|--------|-----------|
+| `lots.py`          | `/lots`, `/lots/{id}` | GET    | Listado de lotes y consulta individual |
+| `route.py`         | `/route`              | GET    | Predice la ruta de procesamiento a partir de métricas geoquímicas |
+| `recommendations.py` | `/recommendations` | GET    | Devuelve parámetros recomendados mediante optimización Bayesiana y explica con SHAP |
+| `forecast.py`      | `/forecast`           | GET    | Pronostica el desempeño de una ruta en el tiempo |
+| `modelcard.py`     | `/modelcard`          | GET    | Recupera la última model card generada |
+| `runs.py`          | `/runs`, `/outcomes`  | POST   | Registra ejecuciones y resultados para aprendizaje activo |
 
 ## Cómo correr localmente
 
-1. Crea y activa un entorno virtual (opcional pero recomendado) y luego instala las dependencias:
+1. Crea y activa un entorno virtual (opcional) e instala las dependencias:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-2. Inicializa la base de datos y levanta la API:
+2. Levanta el back‑end principal:
 
    ```bash
    uvicorn app.main:app --reload
    ```
 
-3. En otra terminal, corre la aplicación Streamlit principal:
+3. Microservicios adicionales (optimización, monitoreo y gobernanza) pueden
+   ejecutarse en procesos separados:
+
+   ```bash
+   # Gestión de lotes
+   uvicorn api.lots:app --reload
+
+   # Predicción de ruta de procesamiento
+   uvicorn api.route:app --reload
+
+   # Recomendaciones vía optimización Bayesiana
+   uvicorn api.recommendations:app --reload
+
+   # Pronósticos de desempeño y monitoreo
+   uvicorn api.forecast:app --reload
+
+   # Exposición de model cards para gobernanza
+   uvicorn api.modelcard:app --reload
+
+   # Registro de corridas y resultados (aprendizaje activo)
+   uvicorn api.runs:app --reload
+   ```
+
+4. En otra terminal levanta las interfaces Streamlit:
 
    ```bash
    streamlit run frontend/app.py
+   streamlit run frontend/lab_ml_app.py  # Opcional: demo de laboratorio/ML
+   streamlit run dashboard/app.py        # Opcional: dashboard adicional
    ```
 
-4. Si deseas probar los modelos de laboratorio y ML, levanta la aplicación dedicada:
+5. Accede al back‑end en `http://localhost:8000` (o el puerto asignado por cada
+   microservicio) y a las interfaces de Streamlit en `http://localhost:8501`.
 
-   ```bash
-   streamlit run frontend/lab_ml_app.py
-   ```
+## Archivos clave
 
-5. Accede a la API en `http://localhost:8000` y a las interfaces de Streamlit en `http://localhost:8501`.
-
-   La API dispone de los siguientes endpoints de predicción:
-
-   - `POST /ml/predict`: devuelve un `score` y una recomendación usando un modelo de machine learning.
-   - `POST /lab/predict`: entrega una recomendación basada en el pipeline de laboratorio.
-
-## Base de datos
-
-Por defecto el backend utiliza SQLite (`app.db`) para facilitar la puesta en marcha.  Los modelos de SQLAlchemy y los esquemas de Pydantic están definidos en `app/models.py` y `app/schemas.py`.  Para cambiar a otro motor (PostgreSQL, MySQL, etc.), ajusta la constante `DATABASE_URL` en `app/db.py`.
+- `mlflow_logging.py`: registro de métricas y artefactos en [MLflow](https://mlflow.org/).
+- `storage/feature_store.py`: feature store local basado en
+  [DuckDB](https://duckdb.org/) y archivos Parquet.
+- `active_learning/scheduler.py`: programador de experimentos con estrategias EI/UCB.
 
 ## Licencia
 
-Publicado bajo la licencia MIT.  Consulta el archivo `LICENSE` para más detalles.
+Publicado bajo la licencia MIT. Consulta el archivo `LICENSE` para más detalles.
