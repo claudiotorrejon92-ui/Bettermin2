@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Callable, Optional
+from typing import Dict, Callable, Optional, List
 
+import json
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -28,14 +29,26 @@ class PredictRequest(BaseModel):
     improvement: Optional[float] = None
 
 
-def _load_predictor(model_path: Path) -> Callable[[Dict[str, float]], float]:
+def _load_feature_order(model_path: Path) -> List[str]:
+    """Load expected feature order from a JSON file alongside the model."""
+    json_path = model_path.with_suffix(".json")
+    with json_path.open() as fh:
+        feature_order = json.load(fh)
+    if not isinstance(feature_order, list):
+        raise ValueError("Feature file must contain a list of feature names")
+    return feature_order
+
+
+def _load_predictor(
+    model_path: Path, feature_order: List[str]
+) -> Callable[[Dict[str, float]], float]:
     """Load a predictor function for the given model path."""
     if model_path.suffix == ".onnx" and ort is not None:
         session = ort.InferenceSession(str(model_path))
         input_name = session.get_inputs()[0].name
 
         def _predict(features: Dict[str, float]) -> float:
-            arr = np.array([[features[k] for k in sorted(features)]], dtype=np.float32)
+            arr = np.array([[features[k] for k in feature_order]], dtype=np.float32)
             return float(session.run(None, {input_name: arr})[0][0])
 
         return _predict
@@ -43,7 +56,7 @@ def _load_predictor(model_path: Path) -> Callable[[Dict[str, float]], float]:
         booster = lgb.Booster(model_file=str(model_path))
 
         def _predict(features: Dict[str, float]) -> float:
-            arr = np.array([[features[k] for k in sorted(features)]])
+            arr = np.array([[features[k] for k in feature_order]])
             return float(booster.predict(arr)[0])
 
         return _predict
@@ -52,11 +65,16 @@ def _load_predictor(model_path: Path) -> Callable[[Dict[str, float]], float]:
 
 def create_app(model_path: str) -> FastAPI:
     """Create a FastAPI app serving predictions for the given model."""
-    predictor = _load_predictor(Path(model_path))
+    model_path = Path(model_path)
+    feature_order = _load_feature_order(model_path)
+    predictor = _load_predictor(model_path, feature_order)
     app = FastAPI(title="Inference API")
 
     @app.post("/predict")
     def predict(req: PredictRequest):
+        missing = [f for f in feature_order if f not in req.features]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Missing features: {missing}")
         try:
             result = predictor(req.features)
         except Exception as exc:  # pragma: no cover - runtime errors

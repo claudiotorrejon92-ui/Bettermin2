@@ -92,7 +92,8 @@ registro en MLflow y paneles Streamlit.
   para BO.
 - **Pipelines:** Prefect/Temporal o Airflow ligero.
 - **Model Registry:** MLflow (artefactos + métricas + versiones).
-- **Servicio de inferencia:** FastAPI + onnxruntime/lightgbm nativo.
+- **Servicio de inferencia:** FastAPI + onnxruntime/lightgbm nativo; requiere un
+  archivo JSON con la lista ordenada de *features* y valida su presencia.
 - **Panel:** Streamlit → más tarde React + backend.
 - **Observabilidad:** Evidently AI (drift) + Prometheus/Grafana para KPIs.
 
