@@ -34,7 +34,14 @@ if uploaded is not None:
 
     # Elegir target
     numeric_cols = [c for c in data.columns if pd.api.types.is_numeric_dtype(data[c])]
-    target_col = st.selectbox("🎯 Columna objetivo (target a predecir)", options=numeric_cols, index=len(numeric_cols)-1 if numeric_cols else 0)
+    if not numeric_cols:
+        st.error("El CSV no contiene columnas numéricas.")
+        st.stop()
+    target_col = st.selectbox(
+        "🎯 Columna objetivo (target a predecir)",
+        options=numeric_cols,
+        index=len(numeric_cols) - 1 if numeric_cols else 0,
+    )
 
     # Features
     default_features = [c for c in numeric_cols if c != target_col]
