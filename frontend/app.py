@@ -2,6 +2,7 @@
 
 import os, sys
 
+import altair as alt
 import pandas as pd
 import requests
 import streamlit as st
@@ -99,13 +100,39 @@ def run_characterization() -> None:
                 and "S_sulfuro_%" in geo_sel.columns
                 and "As_ppm" in geo_sel.columns
             ):
-                chart_data = pd.DataFrame(
-                    {
-                        "S_sulfuro_%": geo_sel["S_sulfuro_%"].astype(float),
-                        "As_ppm": geo_sel["As_ppm"].astype(float),
-                    }
+                chart_data = geo_sel[["muestra_id", "S_sulfuro_%", "As_ppm"]].copy()
+                chart_data["S_sulfuro_%"] = pd.to_numeric(
+                    chart_data["S_sulfuro_%"], errors="coerce"
                 )
-                st.bar_chart(chart_data)
+                chart_data["As_ppm"] = pd.to_numeric(
+                    chart_data["As_ppm"], errors="coerce"
+                )
+                chart_data = chart_data.dropna(subset=["S_sulfuro_%", "As_ppm"])
+
+                if not chart_data.empty:
+                    scatter = (
+                        alt.Chart(chart_data)
+                        .mark_circle(size=90)
+                        .encode(
+                            x=alt.X("S_sulfuro_%:Q", title="S sulfuro (%)"),
+                            y=alt.Y("As_ppm:Q", title="Arsénico (ppm)"),
+                            tooltip=[
+                                alt.Tooltip("muestra_id:N", title="Muestra"),
+                                alt.Tooltip("S_sulfuro_%:Q", title="S sulfuro (%)", format=".2f"),
+                                alt.Tooltip("As_ppm:Q", title="As (ppm)", format=".2f"),
+                            ],
+                        )
+                        .interactive()
+                    )
+                    st.altair_chart(scatter, use_container_width=True)
+                    st.caption(
+                        "Cada punto representa una muestra. S sulfuro se expresa en porcentaje "
+                        "en peso y As en partes por millón (ppm)."
+                    )
+                else:
+                    st.info(
+                        "No hay datos numéricos válidos para graficar S sulfuro y As de las muestras."
+                    )
 
             recomendacion = recommend_process(s_sulfuro_mean, as_mean)
 
