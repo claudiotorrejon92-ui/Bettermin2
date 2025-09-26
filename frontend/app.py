@@ -38,8 +38,26 @@ def run_characterization() -> None:
         except Exception as e:
             st.error(f"Error leyendo el archivo: {e}")
         else:
-            lote_ids = df_lotes["lote_id"].astype(str).dropna().unique().tolist()
+            if "lote_id" not in df_lotes.columns:
+                st.warning(
+                    "La hoja 01_Lotes no contiene la columna 'lote_id'. Revisa la plantilla."
+                )
+                return
+
+            lote_ids = (
+                df_lotes["lote_id"].dropna().astype(str).unique().tolist()
+            )
+
+            if not lote_ids:
+                st.warning(
+                    "No se encontraron valores válidos para 'lote_id' en la hoja 01_Lotes."
+                )
+                return
+
             selected_lote = st.sidebar.selectbox("Selecciona un lote", lote_ids)
+
+            if not selected_lote:
+                return
 
             st.header("Información del lote")
             st.dataframe(df_lotes[df_lotes["lote_id"].astype(str) == selected_lote])
