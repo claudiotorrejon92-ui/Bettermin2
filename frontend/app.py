@@ -519,20 +519,42 @@ def run_characterization() -> None:
 
             recomendacion = recommend_process(s_sulfuro_mean, as_mean)
 
-            if api_url:
+            api_error = None
+            if api_url and s_sulfuro_mean is not None and as_mean is not None:
+                url = api_url.rstrip("/") + "/ml/predict"
+                payload = {
+                    "s_sulfuro_pct": s_sulfuro_mean,
+                    "as_ppm": as_mean,
+                }
                 try:
-                    url = api_url.rstrip("/") + "/ml/predict"
-                    payload = {
-                        "s_sulfuro_pct": s_sulfuro_mean,
-                        "as_ppm": as_mean,
-                    }
-                    resp = requests.post(url, json=payload)
-                    if resp.status_code == 200:
-                        recomendacion = resp.json().get(
-                            "recommendation", recomendacion
+                    resp = requests.post(url, json=payload, timeout=10)
+                    resp.raise_for_status()
+                except requests.exceptions.HTTPError as exc:
+                    response = exc.response
+                    if response is not None:
+                        detail = response.text or response.reason
+                        api_error = (
+                            f"La API respondió con un error {response.status_code}: {detail}"
                         )
-                except Exception:
-                    pass
+                    else:
+                        api_error = f"La API respondió con un error: {exc}"
+                except requests.exceptions.RequestException as exc:
+                    api_error = f"No se pudo contactar con la API: {exc}"
+                else:
+                    try:
+                        body = resp.json()
+                    except ValueError:
+                        api_error = "La API devolvió una respuesta inválida."
+                    else:
+                        recomendacion = body.get("recommendation", recomendacion)
+            elif api_url:
+                api_error = (
+                    "La recomendación automática requiere promedios numéricos de "
+                    "S sulfuro y As."
+                )
+
+            if api_error:
+                st.warning(api_error)
 
             st.success(
                 f"Recomendación para el lote {selected_lote}: {recomendacion}"
