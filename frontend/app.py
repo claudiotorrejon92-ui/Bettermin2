@@ -42,21 +42,51 @@ def _normalize_dataframe(df: pd.DataFrame, schema: dict[str, type], name: str) -
             f"La hoja {name} no contiene las columnas obligatorias: {', '.join(missing_columns)}"
         )
 
+    df = df[list(schema.keys())].copy()
+
     for column, dtype in schema.items():
         if dtype is str:
             df[column] = df[column].apply(
-                lambda x: str(x).strip() if pd.notnull(x) else pd.NA
+                lambda x: str(x).strip() if pd.notnull(x) else ""
             )
+            df[column] = df[column].replace("", pd.NA)
+        elif dtype is float:
+            df[column] = pd.to_numeric(df[column], errors="coerce")
+
+    df = df.dropna(subset=list(schema.keys()), how="all").reset_index(drop=True)
+
+    if df.empty:
+        return df
+
+    for column, dtype in schema.items():
+        if dtype is str:
             if df[column].isna().any():
                 raise ValueError(
                     f"La columna '{column}' en la hoja {name} tiene valores vacíos."
                 )
         elif dtype is float:
-            df[column] = pd.to_numeric(df[column], errors="coerce")
             if df[column].isna().any():
                 raise ValueError(
                     f"La columna '{column}' en la hoja {name} debe contener solo valores numéricos."
                 )
+
+    for column, dtype in schema.items():
+        if dtype is str:
+            df[column] = df[column].astype(str)
+        elif dtype is float:
+            df[column] = df[column].astype(float)
+
+    return df
+
+
+def _coerce_editor_payload(data: object) -> pd.DataFrame:
+    if isinstance(data, pd.DataFrame):
+        df = data.copy()
+    else:
+        df = pd.DataFrame(data)
+
+    if "_index" in df.columns:
+        df = df.drop(columns=["_index"])
 
     return df
 
@@ -103,6 +133,10 @@ def run_characterization() -> None:
                 df_geo = _normalize_dataframe(
                     df_geo_raw, GEOQUIMICA_SCHEMA, "03_Geoquimica"
                 )
+                if df_lotes.empty or df_muestras.empty or df_geo.empty:
+                    raise ValueError(
+                        "El archivo debe contener datos válidos en las tres hojas."
+                    )
             except ValueError as e:
                 st.error(str(e))
             except Exception as e:
@@ -143,17 +177,21 @@ def run_characterization() -> None:
         if submitted:
             try:
                 lotes_norm = _normalize_dataframe(
-                    pd.DataFrame(lotes_data), LOTES_SCHEMA, "01_Lotes"
+                    _coerce_editor_payload(lotes_data), LOTES_SCHEMA, "01_Lotes"
                 )
                 muestras_norm = _normalize_dataframe(
-                    pd.DataFrame(muestras_data), MUESTRAS_SCHEMA, "02_Muestras"
+                    _coerce_editor_payload(muestras_data),
+                    MUESTRAS_SCHEMA,
+                    "02_Muestras",
                 )
                 geo_norm = _normalize_dataframe(
-                    pd.DataFrame(geo_data), GEOQUIMICA_SCHEMA, "03_Geoquimica"
+                    _coerce_editor_payload(geo_data),
+                    GEOQUIMICA_SCHEMA,
+                    "03_Geoquimica",
                 )
                 if lotes_norm.empty or muestras_norm.empty or geo_norm.empty:
                     raise ValueError(
-                        "Todas las hojas deben contener al menos una fila de datos."
+                        "Todas las hojas deben contener al menos una fila de datos válidos."
                     )
             except ValueError as e:
                 st.error(str(e))
@@ -179,6 +217,20 @@ def run_characterization() -> None:
                 and isinstance(df_geo, pd.DataFrame)
             ):
                 data_ready = True
+
+    if not data_ready:
+        cached_lotes = st.session_state.get("df_lotes")
+        cached_muestras = st.session_state.get("df_muestras")
+        cached_geo = st.session_state.get("df_geo")
+        if (
+            isinstance(cached_lotes, pd.DataFrame)
+            and isinstance(cached_muestras, pd.DataFrame)
+            and isinstance(cached_geo, pd.DataFrame)
+        ):
+            df_lotes = cached_lotes
+            df_muestras = cached_muestras
+            df_geo = cached_geo
+            data_ready = True
 
     if not data_ready:
         st.info("Carga una plantilla o ingresa datos manualmente para comenzar.")
