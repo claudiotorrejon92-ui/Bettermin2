@@ -1,9 +1,8 @@
 import * as Accordion from "@radix-ui/react-accordion";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
-import * as Tabs from "@radix-ui/react-tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import { Separator } from "@radix-ui/react-separator";
-import type { ClassValue } from "clsx";
-import { clsx } from "clsx";
+import { cn } from "@/lib/utils";
 import {
   Atom,
   Droplets,
@@ -13,10 +12,7 @@ import {
   Sprout,
   ThermometerSun
 } from "lucide-react";
-import { twMerge } from "tailwind-merge";
 import { Fragment } from "react";
-
-const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 
 const procesos = [
   {
@@ -199,13 +195,13 @@ const CatalogoBioMineralDemo = () => {
         </div>
       </header>
 
-      <Tabs.Root
+      <Tabs
         defaultValue={procesos[0].id}
         className="overflow-hidden rounded-3xl border border-white/5 bg-slate-950/40"
       >
-        <Tabs.List className="flex flex-wrap gap-2 border-b border-white/5 bg-slate-900/80 p-4">
+        <TabsList className="flex flex-wrap gap-2 border-b border-white/5 bg-slate-900/80 p-4">
           {procesos.map(({ id, label, descripcion, icono: Icon }) => (
-            <Tabs.Trigger
+            <TabsTrigger
               key={id}
               value={id}
               className={cn(
@@ -220,12 +216,12 @@ const CatalogoBioMineralDemo = () => {
                 <span>{label}</span>
                 <span className="text-xs text-slate-400">{descripcion}</span>
               </span>
-            </Tabs.Trigger>
+            </TabsTrigger>
           ))}
-        </Tabs.List>
+        </TabsList>
 
         {procesos.map((proceso) => (
-          <Tabs.Content key={proceso.id} value={proceso.id} className="p-6">
+          <TabsContent key={proceso.id} value={proceso.id} className="p-6">
             <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
               <ScrollArea.Root className="scroll-area h-[420px] overflow-hidden rounded-2xl border border-white/5 bg-slate-900/60">
                 <ScrollArea.Viewport className="h-full w-full p-6">
@@ -341,9 +337,9 @@ const CatalogoBioMineralDemo = () => {
                 </div>
               </div>
             </div>
-          </Tabs.Content>
+          </TabsContent>
         ))}
-      </Tabs.Root>
+      </Tabs>
     </div>
   );
 };
