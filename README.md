@@ -200,6 +200,20 @@ streamlit run frontend/app.py
 streamlit run dashboard/app.py
 ```
 
+### Frontend
+
+#### Demo Catálogo Bio-Mineral (Vite + React)
+
+```bash
+cd frontend/catalogo-bio-mineral-demo
+
+# instalar dependencias
+npm install        # o pnpm install
+
+# ambiente de desarrollo
+npm run dev        # o pnpm dev
+```
+
 ### MLflow Tracking Server (opcional)
 
 ```bash
